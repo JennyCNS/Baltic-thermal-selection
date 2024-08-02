@@ -1,0 +1,32 @@
+#run admixture
+# ADMIXTURE does not accept chromosome names that are not human chromosomes. We  will thus just exchange the first column by 0
+
+#plink --file kiel_5controls --maf --recode --make-bed --allow-extra-chr --out kielmaf001
+plink --file kielmaf001 --double-id --allow-extra-chr --set-missing-var-ids @:# --indep-pairwise 50 10 0.1 --out kielmaf001
+plink --file kielmaf001 --double-id --allow-extra-chr --set-missing-var-ids @:# --extract kielmaf001.prune.in --make-bed --pca --out kielmaf001pruned
+
+
+awk '{$1=0;print $0}' kielmaf001pruned.bim > kielmaf001pruned.bim.tmp
+mv kielmaf001pruned.bim.tmp kielmaf001pruned.bim
+admixture --cv kielmaf001pruned.bed 2 > prunedlog2.out
+
+#ADMIXTURE produced 2 files: .Q which contains cluster assignments for each ind                          ividual and .P which contains for each SNP the population allele frequencies.
+
+#Lets now run it in a for loop with K=2 to K=5 and direct the output into log f                          iles
+
+for i in {2..6}
+do
+admixture --cv kielmaf001pruned.bed $i > prunedlog${i}.out
+done
+
+
+awk '/CV/ {print $3,$4}' *out | cut -c 4,7-20 > kielmaf001pruned.cv.error
+
+#best is k=4
+
+awk '{split($1,name,"."); print $1,name[2]}' kielmaf001pruned.nosex > kielmaf001pruned.list
+
+done
+
+
+
